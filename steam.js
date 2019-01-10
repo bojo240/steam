@@ -5,17 +5,22 @@ const fs = require('fs-extra');
 {
 	try {
 		
-		const browser = await puppeteer.launch({ headless: true, args: ['--window-size=1920,1040'] });
+		const browser = await puppeteer.launch({ headless: false, args: ['--window-size=1920,1040'] });
 		const page = await browser.newPage();
 		await page.setViewport({ width: 1920, height: 1040 });
-		//page.setUserAgent('...');
+		
+		page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.75 Safari/537.36');
+		
 		await page.goto('https://cs.money/list_overstock?fbclid=IwAR0Z9rpCD_o2OtrVYslvpQzhmaG7C3FmGZyajPbozWJ7ZcCnRernQYRJPcQ');
 		await page.waitFor(500);
 		const over = ('body > pre');
 		const overstock = await page.$eval(over, over => over.innerText);
+		
 		await page.goto('https://cs.money/');
 		await page.waitForSelector('#main_container_bot > div.items');
 		await page.waitFor(5000);
+		
+		//TODO upewnic sie co do jezyka i waluty na stronie zanim zacznie robic
 		//change currency to $
 		// const plntodol = '#header_panel > div.header_menu_mobile > div > div.header_drop.currency';
 		// await page.hover(plntodol);
@@ -29,24 +34,38 @@ const fs = require('fs-extra');
 		
 		await autoScroll(page);
 		await page.waitFor(15000); //time to load
-		const items = await page.$$("div.items > div.item");
-		const link ='body > div.body_scroll > div.wrapper_popups > div.item_popup_container > div > div.clearfix > ul > li:nth-child(3) > a';
-		const price = 'body > div.body_scroll > div.wrapper_popups > div.item_popup_container > div > div.clearfix > div.ip_price';
-		const name = 'body > div.body_scroll > div.wrapper_popups > div.item_popup_container > div > div.ip_header > div.ip_name > span';
-		const name2 = 'body > div.body_scroll > div.wrapper_popups > div.item_popup_container > div > div.ip_header > div.ip_name > div.ip_name_big'
+		
+		//Niezbedne kody HTML
+		const linkHTML ='body > div.body_scroll > div.wrapper_popups > div.item_popup_container > div > div.clearfix > ul > li:nth-child(3) > a';
+		const priceHTML = 'body > div.body_scroll > div.wrapper_popups > div.item_popup_container > div > div.clearfix > div.ip_price';
+		const nameHTML = 'body > div.body_scroll > div.wrapper_popups > div.item_popup_container > div > div.ip_header > div.ip_name > span';
+		const name2HTML = 'body > div.body_scroll > div.wrapper_popups > div.item_popup_container > div > div.ip_header > div.ip_name > div.ip_name_big';
+		const doplataHTML = 'body > div.body_scroll > div.wrapper_popups > div.item_popup_container > div > div.markup_main_container';
 
-		const zle = 'body > div.body_scroll > div.wrapper_popups > div.item_popup_container > div > ul'
-		var prevlinkk = '';
-		//TODO sprawdzic czy nie weszloby childnodes zamiast nth-child w item/items
-		await fs.writeFile('csitems.csv','name ; price ; link\n');
+		//Niezbedne zmienne
+		var prevname = 'Nazwa';
+		var prevprice = 'Cena Cs.Money';
+		var prevlink = 'Link do Steam';
+		var prevdoplata = false;
+		
+		var link = '';
+		var price = 0.0;
+		var name = '';
+		var doplata = false;
+		
+		await fs.writeFile('csitems.csv','');
+
+		//petla glowna skryptu
 		for(var i = 1; i < 10000; ++i)
 		{
-			var item = "#main_container_bot > div.items > div:nth-child("+i+")";
-			await page.click("#main_container_bot > div.items > div:nth-child("+i+")", { button: "right"}); // right click a node at `contextmenu` part
-			try
-			{
+			var itemHTML = "#main_container_bot > div.items > div:nth-child("+i+")";
+			var name3HTML = "#main_container_bot > div.items > div:nth-child("+i+") > div.s_c > div";
 
-				var linkk = await page.$eval(link, link => link.href);
+			await page.click(itemHTML, { button: "right"}); 
+
+			try//jezeli nie widzi itemu, scrolluje na dol, dekrementuje zmienna 'i', a nastepnie continue;
+			{
+				link = await page.$eval(linkHTML, linkHTML => linkHTML.href);
 			}
 			catch (error)
 			{
@@ -66,37 +85,47 @@ const fs = require('fs-extra');
 				catch (e) {}
 				continue;
 			}
-			await page.waitFor(500); //time to load
-			var name3 = '#main_container_bot > div.items > div:nth-child('+i+') > div.s_c > div';
-			var pricee = await page.$eval(price, price => price.innerText);
-			pricee = pricee.substr(2);
-			var namee2 = await page.$eval(name2, name2 => name2.innerText);
-			var namee3 = await page.$eval(name3, name3 => name3.innerText);
-			if(namee3.contains('FN'))
-				namee3 = '(Factory New)';
-			else if(namee3.contains('MW'))
-				namee3 = '(Minimal Wear)';
-			else if(namee3.contains('FT'))
-				namee3 = '(Field Tested)';
-			else if(namee3.contains('WW'))
-				namee3 = '(Well Worn)';
-			else if(namee3.contains('BS'))
-				namee3 = '(Battle Scarred)';
-			var namee = namee2 + ' | ' + await page.$eval(name, name => name.innerText) + ' ' + namee3;
-			var zlee = await page.$eval(zle, zle => zle.innerHTML);
-			var doplata = true;
-			try 
+			
+			await page.waitFor(500);
+			
+			price = await page.$eval(priceHTML, priceHTML => priceHTML.innerText);
+			price = price.substr(2);
+			
+			var name2 = await page.$eval(name2HTML, name2HTML => name2HTML.innerText);
+			var name3 = await page.$eval(name3HTML, name3HTML => name3HTML.innerText);
+			if(name3.contains('FN'))
+				name3 = '(Factory New)';
+			else if(name3.contains('MW'))
+				name3 = '(Minimal Wear)';
+			else if(name3.contains('FT'))
+				name3 = '(Field Tested)';
+			else if(name3.contains('WW'))
+				name3 = '(Well Worn)';
+			else if(name3.contains('BS'))
+				name3 = '(Battle Scarred)';
+			name = name2 + ' | ' + await page.$eval(nameHTML, nameHTML => nameHTML.innerText) + ' ' + name3;
+						
+			doplata = true;
+			try // jezeli nie moze znalezc diva z doplatami, znaczy ze doplaty nie ma
 			{
-			  await page.waitForSelector('body > div.body_scroll > div.wrapper_popups > div.item_popup_container > div > div.markup_main_container',{ timeout: 500 });
-			  
-			} catch (error) {
+				await page.waitForSelector(doplataHTML,{ timeout: 500 });
+			} 
+			catch (error) 
+			{
 				doplata = false;
 			}
-			if(prevlinkk != linkk && namee.contains("Doppler") == false && !doplata && overstock.contains(namee) == false)
-			{
-				prevlinkk = linkk;
-				await fs.appendFile('csitems.csv', `${namee}; ${pricee}; ${linkk};\n`);
-			}
+			console.log(prevname + '\n' + prevprice + '\n' + prevlink + '\n' + prevdoplata + '\n' + 'prevlink != link  ' + (prevlink != link) + '\n' + '!prevname.contains("Doppler")  ' + (!prevname.contains("Doppler")) + '\n' + '!prevdoplata  ' + (!prevdoplata) + '\n' + 'overstock.contains(prevname)  ' + (overstock.contains(prevname)) + '\n\n' + name + '\n' + price + '\n' + link + '\n' + doplata + '\n\n\n\n');
+			
+			if(prevlink != link && !prevname.contains("Doppler") && !prevdoplata && !overstock.contains(prevname)) //jezeli nowy item, zapisz dotychczasowe wartosci, o ile pasuja do kryteriow
+				await fs.appendFile('csitems.csv', `${prevname}; ${prevprice}; ${prevlink};\n`);
+				//zmienne ustaw na nowe wartosci;
+
+			if(price < prevprice && prevlink == link && !prevname.contains("Doppler") && !prevdoplata && !overstock.contains(prevname))//jezeli to ten sam item, zmien cene(o ile mniejsza)
+				price = prevprice;//zostaw stara cene
+			prevlink = link;
+			prevprice = price;
+			prevname = name;
+			prevdoplata = doplata;
 		}
 		console.log('done');
 		await browser.close();
@@ -107,6 +136,8 @@ const fs = require('fs-extra');
 })();
 
 //TODO gdy link sie nie zmienia, cena sie nadpisuje jezeli jest mniejsza. gdy link sie zmienia, zapisywane sa wszystkie ostatnio znane price, name, link.
+
+//sprawdz czy link sie zmienil, jezeli tak to zapisz dotychczasowe wartosci, jezeli nie to zmien cene produktu
 
 async function autoScroll(page){
     await page.evaluate(async () => {

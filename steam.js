@@ -43,10 +43,10 @@ const fs = require('fs-extra');
 		const doplataHTML = 'body > div.body_scroll > div.wrapper_popups > div.item_popup_container > div > div.markup_main_container';
 
 		//Niezbedne zmienne
-		var prevname = 'Nazwa';
-		var prevprice = 'Cena Cs.Money';
-		var prevlink = 'Link do Steam';
-		var prevdoplata = false;
+		// var prevname = 'Nazwa';
+		// var prevprice = 'Cena Cs.Money';
+		// var prevlink = 'Link do Steam';
+		// var prevdoplata = false;
 		
 		var link = '';
 		var price = 0.0;
@@ -114,18 +114,10 @@ const fs = require('fs-extra');
 			{
 				doplata = false;
 			}
-			console.log(prevname + '\n' + prevprice + '\n' + prevlink + '\n' + prevdoplata + '\n' + 'prevlink != link  ' + (prevlink != link) + '\n' + '!prevname.contains("Doppler")  ' + (!prevname.contains("Doppler")) + '\n' + '!prevdoplata  ' + (!prevdoplata) + '\n' + 'overstock.contains(prevname)  ' + (overstock.contains(prevname)) + '\n\n' + name + '\n' + price + '\n' + link + '\n' + doplata + '\n\n\n\n');
 			
-			if(prevlink != link && !prevname.contains("Doppler") && !prevdoplata && !overstock.contains(prevname)) //jezeli nowy item, zapisz dotychczasowe wartosci, o ile pasuja do kryteriow
+			if(!name.contains("Doppler") && !doplata && !overstock.contains(name)) //jezeli nowy item, zapisz dotychczasowe wartosci, o ile pasuja do kryteriow
 				await fs.appendFile('csitems.csv', `${prevname}; ${prevprice}; ${prevlink};\n`);
 				//zmienne ustaw na nowe wartosci;
-
-			if(price < prevprice && prevlink == link && !prevname.contains("Doppler") && !prevdoplata && !overstock.contains(prevname))//jezeli to ten sam item, zmien cene(o ile mniejsza)
-				price = prevprice;//zostaw stara cene
-			prevlink = link;
-			prevprice = price;
-			prevname = name;
-			prevdoplata = doplata;
 		}
 		console.log('done');
 		await browser.close();

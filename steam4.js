@@ -77,7 +77,7 @@ const converter = require('convert-csv-to-array');
 
 	
 	//petla glowna skryptu
-	for(var i = 1; i < 4000; ++i)
+	for(var i = 1; i < 6000; ++i)
 	{
 		var itemHTML = "#main_container_bot > div.items > div:nth-child("+i+")";
 		var name3HTML = "#main_container_bot > div.items > div:nth-child("+i+") > div.s_c > div";

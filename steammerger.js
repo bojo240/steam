@@ -54,6 +54,7 @@ const converter = require('convert-csv-to-array');
 				if(itemytemp[j][0]== itemy[k][0])
 				{
 					czyjestitem = true;
+					itemy[k][4] = itemytemp[j][4];
 					if(itemytemp[j][1] < itemy[k][1])
 						itemy[k][1] = itemy[j][i];
 					break;

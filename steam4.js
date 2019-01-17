@@ -26,17 +26,18 @@ const converter = require('convert-csv-to-array');
 	await autoScroll(page);
 	await page.waitFor(20000); //time to load
 	
-
+	const higherPriceHTML = '#slider_price > div.price_inputs.superclass_space > label:nth-child(3) > input[type="tel"]';
 	const lowerPriceHtml = '#slider_price > div.price_inputs.superclass_space > label:nth-child(1) > input[type="tel"]';
 	
-	await page.evaluate((lowerPriceHtml) => {
+	await page.evaluate((higherPriceHTML, lowerPriceHtml) => {
+      document.querySelector(higherPriceHTML).value = '';
 	  document.querySelector(lowerPriceHtml).value = '';
-    }, lowerPriceHtml);
+    }, higherPriceHTML, lowerPriceHtml);
 	
-	const lowerPrice = '132';
+	const higherPrice = '0.66';
 	
-	await page.focus(lowerPriceHtml);
-	await page.keyboard.type(lowerPrice);
+	await page.focus(higherPriceHTML);
+	await page.keyboard.type(higherPrice);
 	
 	await page.waitFor(20000); //time to load
 	
@@ -55,7 +56,7 @@ const converter = require('convert-csv-to-array');
 	var data = wyswietlDate();
 	var overstock = false;
 	
-	const filename = 'csitems1.csv';
+	const filename = 'csitems5.csv';
 	
 	var itemyString = fs.readFileSync(filename, 'utf8');
 	var itemy = convertCSVToArray(itemyString, {
@@ -73,7 +74,7 @@ const converter = require('convert-csv-to-array');
 		if(over.contains(itemy[i][0]))
 			itemy[i][3] = true;
 	}
-	
+
 	
 	//petla glowna skryptu
 	for(var i = 1; i < 4000; ++i)
@@ -97,6 +98,7 @@ const converter = require('convert-csv-to-array');
 			--i;
 			try
 			{
+
 				const scrollable = await page.$eval
 				(
 				'#block_items_bot > div.block_content', e=>
@@ -108,11 +110,13 @@ const converter = require('convert-csv-to-array');
 
 			}
 			catch (e) 
-			{}
+			{
+				break;
+			}
 			continue;
 		}
 		
-		licznikscrolla = 0;
+
 		await page.waitFor(500 + itemy.length);
 		
 		//zmienna price

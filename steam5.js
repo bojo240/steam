@@ -26,13 +26,6 @@ const converter = require('convert-csv-to-array');
 	await autoScroll(page);
 	await page.waitFor(20000); //time to load
 	
-
-	const lowerPriceHtml = '#slider_price > div.price_inputs.superclass_space > label:nth-child(1) > input[type="tel"]';
-	
-	await page.evaluate((lowerPriceHtml) => {
-	  document.querySelector(lowerPriceHtml).value = '';
-    }, lowerPriceHtml);
-	
 	const higherPriceHTML = '#slider_price > div.price_inputs.superclass_space > label:nth-child(3) > input[type="tel"]';
 	const lowerPriceHtml = '#slider_price > div.price_inputs.superclass_space > label:nth-child(1) > input[type="tel"]';
 	

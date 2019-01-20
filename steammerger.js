@@ -19,6 +19,7 @@ const converter = require('convert-csv-to-array');
 	await page.waitFor(500);
 	const overHTML = ('body > pre');
 	const over = await page.$eval(overHTML, overHTML => overHTML.innerText);
+	
 	var filename = 'csitems.csv';
 
 	var itemyString = fs.readFileSync(filename, 'utf8');
@@ -27,7 +28,7 @@ const converter = require('convert-csv-to-array');
 		separator: ';', 
 	});
 
-	for(var i = 1; i<itemy.length; ++i)
+	for(var i = 0; i<itemy.length; ++i)
 	{
 		itemy[i][3] = false;
 		if(over.contains(itemy[i][0]))
@@ -47,16 +48,16 @@ const converter = require('convert-csv-to-array');
 			separator: ';', 
 		});
 		
-		for(var j = 0; j<itemytemp.length;++j)
+		for(var j = 0; j<itemytemp.length; ++j)
 		{	
 			var czyjestitem = false;
 			for(var k = 0; k<itemy.length; ++k)
-				if(itemytemp[j][0]== itemy[k][0])
+				if(itemytemp[j][0].toString()== itemy[k][0].toString())
 				{
 					czyjestitem = true;
 					itemy[k][4] = itemytemp[j][4];
-					if(itemytemp[j][1] < itemy[k][1])
-						itemy[k][1] = itemy[j][i];
+					if(parseInt(itemytemp[j][1]) < parseInt(itemy[k][1]))
+						itemy[k][1] = itemytemp[j][i];
 					break;
 				}
 			if(czyjestitem == false)

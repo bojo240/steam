@@ -26,6 +26,7 @@ const converter = require('convert-csv-to-array');
 	await autoScroll(page);
 	await page.waitFor(20000); //time to load
 	
+
 	const higherPriceHTML = '#slider_price > div.price_inputs.superclass_space > label:nth-child(3) > input[type="tel"]';
 	const lowerPriceHtml = '#slider_price > div.price_inputs.superclass_space > label:nth-child(1) > input[type="tel"]';
 
@@ -34,8 +35,8 @@ const converter = require('convert-csv-to-array');
 	  document.querySelector(lowerPriceHtml).value = '';
     }, higherPriceHTML, lowerPriceHtml);
 	
-	const lowerPrice = '2.7';
-	const higherPrice = '15';
+	const lowerPrice = '15';
+	const higherPrice = '132';
 	
 	await page.focus(lowerPriceHtml);
 	await page.keyboard.type(lowerPrice);
@@ -59,7 +60,7 @@ const converter = require('convert-csv-to-array');
 	var data = wyswietlDate();
 	var overstock = false;
 	
-	const filename = 'csitems3.csv';
+	const filename = 'csitems2.csv';
 	
 	var itemyString = fs.readFileSync(filename, 'utf8');
 	var itemy = convertCSVToArray(itemyString, {
@@ -70,38 +71,41 @@ const converter = require('convert-csv-to-array');
 	//po zaladowaniu pliku do programu, wyczysc go
 	await fs.writeFile(filename,'');
 
-	//sprawdz czy dotychczasowe itemy nie pojawily sie na overstocku
-	for(var i = 1; i<itemy.length; ++i)
+	//zaktualizuj pole overstock
+	for(var i = 0; i<itemy.length; ++i)
 	{
 		itemy[i][3] = false;
 		if(over.contains(itemy[i][0]))
 			itemy[i][3] = true;
 	}
-
+	
 	
 	//petla glowna skryptu
-	for(var i = 1; i < 6000; ++i)
+	for(var i = 1; i < 10000; ++i)
 	{
 		var itemHTML = "#main_container_bot > div.items > div:nth-child("+i+")";
 		var name3HTML = "#main_container_bot > div.items > div:nth-child("+i+") > div.s_c > div";
-		try
+		
+		try//jezeli istnieje item, kliknij go prawym przyciskiem myszy
 		{
 		await page.click(itemHTML, { button: "right"}); 
 		}
-		catch
+		catch//jezeli itemu nie ma, skoncz petle i zapisz wyniki do pliku
 		{
 			break;
 		}
-		try//zmienna link -- jezeli nie widzi itemu, scrolluje na dol, dekrementuje zmienna 'i', a nastepnie continue;
+		
+		await page.waitFor(100); // poczekaj az sie zaladuje
+		
+		try//sprobuj zapisac sobie link do rynku
 		{
 			link = await page.$eval(linkHTML, linkHTML => linkHTML.href);
 		}
-		catch (error)
+		catch (error)//jezeli widzisz item, ale po kliknieciu nie widzisz div'a, trzeba zescrollowac
 		{
 			--i;
 			try
 			{
-
 				const scrollable = await page.$eval
 				(
 				'#block_items_bot > div.block_content', e=>
@@ -116,9 +120,7 @@ const converter = require('convert-csv-to-array');
 			{}
 			continue;
 		}
-		
-
-		await page.waitFor(500 + itemy.length);
+		//skoro udalo ci sie zgarnac link, pozostale rzeczy tez powinienes byc w stanie zgarnac
 		
 		//zmienna price
 		price = await page.$eval(priceHTML, priceHTML => priceHTML.innerText);
@@ -127,14 +129,16 @@ const converter = require('convert-csv-to-array');
 		//zmienna name
 		var name2 = await page.$eval(name2HTML, name2HTML => name2HTML.innerText);
 		var name3 = '';
-		try
+		
+		try // jezeli istnieje name3
 		{
-			name3 = await page.$eval(name3HTML, name3HTML => name3HTML.innerText);
+			name3 = await page.$eval(name3HTML, name3HTML => name3HTML.innerText); 
 		}
-		catch
+		catch // jezeli nie, wypierdolone w item, idz dalej
 		{
 			continue;
 		}
+		
 		if(name3.contains('FN'))
 			name3 = '(Factory New)';
 		else if(name3.contains('MW'))
@@ -145,12 +149,14 @@ const converter = require('convert-csv-to-array');
 			name3 = '(Well-Worn)';
 		else if(name3.contains('BS'))
 			name3 = '(Battle-Scarred)';
+		
+		//zapisz ostateczna nazwe itemu
 		name = name2 + ' | ' + await page.$eval(nameHTML, nameHTML => nameHTML.innerText) + ' ' + name3;
 					
 		doplata = true;
 		try // jezeli nie moze znalezc diva z doplatami, znaczy ze doplaty nie ma
 		{
-			await page.waitForSelector(doplataHTML,{ timeout: 500 });
+			await page.waitForSelector(doplataHTML,{ timeout: 100 });
 		} 
 		catch (error) 
 		{
@@ -164,14 +170,15 @@ const converter = require('convert-csv-to-array');
 		
 		//zanim zapiszesz, sprawdz czy juz tego itema nie bylo
 		var czyjestitem = false;
+		
 		if(!name.contains("Doppler") && !doplata) //jezeli nowy item, zapisz dotychczasowe wartosci, o ile pasuja do kryteriow
 		{
 			for(var j = 0; j<itemy.length; ++j)
-				if(name == itemy[j][0])
+				if(name.toString() == itemy[j][0].toString())
 				{
 					czyjestitem = true;
 					itemy[j][4] = data;
-					if(price < itemy[j][1])
+					if(parseInt(price) < parseInt(itemy[j][1]))
 						itemy[j][1] = price;
 					break;
 				}

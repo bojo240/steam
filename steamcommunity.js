@@ -17,17 +17,30 @@ const converter = require('convert-csv-to-array');
 	const overHTML = ('body > pre');
 	const over = await page.$eval(overHTML, overHTML => overHTML.innerText);
 	
+	await page.goto('https://steamcommunity.com/login/home/?goto=');
+	
+	const login = '#steamAccountName';
+	const pass = '#steamPassword';
+	
+	await page.focus(login);
+	await page.keyboard.type('dobocenia1');
+	
+	await page.focus(pass);
+	await page.keyboard.type('Dobocenia2');
+	
+	await page.click('#SteamLogin');
+	
+	await page.waitFor(1000);
+	
 	var itemyString = fs.readFileSync('csitems.csv', 'utf8');
-	var itemy = convertCSVToArray(itemyString, {
+	var itemy = convertCSVToArray(itemyString, 
+	{
 		type: 'array',
 		separator: ';', 
 	});
 	
-	//po zaladowaniu pliku do programu, wyczysc go
-	await fs.writeFile('csitems.csv','');
-
 	//sprawdz czy dotychczasowe itemy nie pojawily sie na overstocku
-	for(var i = 1; i<itemy.length; ++i)
+	for(var i = 0; i<itemy.length; ++i)
 	{
 		itemy[i][3] = false;
 		if(over.contains(itemy[i][0]))
@@ -42,13 +55,15 @@ const converter = require('convert-csv-to-array');
 
 	for(var i = 0; i<itemy.length; ++i)
 	{
+		if((parseInt(itemy[i][1]) < 70 && parseInt(itemy[i][1]) > 2 ) || itemy[i][3] == true) // jezeli jest na overstocku, albo w przedziale pomiedzy 2$ a 70$, idz dalej
+			continue;
 		await page.goto(itemy[i][2]);
 		await page.waitFor(1500);
 		try
 		{
 			await page.waitForSelector(czyjestitemHTML, {timeout:100});
 			
-			try// sprawdz czy widzisz cene
+			try // sprawdz czy widzisz cene
 			{
 				await page.waitForSelector(cenaHTML , {timeout:100}); // jezeli tak to rob, jak nie to poczekaj i odswiez
 				var cena = await page.$eval(cenaHTML, cenaHTML => cenaHTML.innerText);
@@ -58,7 +73,7 @@ const converter = require('convert-csv-to-array');
 				var stosunek = parseInt(itemy[i][1]) / parseInt(cenasteam);
 				await fs.appendFile('csitemswithsteamprice.csv',`${itemy[i][0]};${itemy[i][1]};${itemy[i][2]};${itemy[i][3]};${itemy[i][4]};${cenasteam};${stosunek}\n`);
 			}
-			catch (e)
+			catch (e) // jezeli nie widzisz ceny, poczekaj 10 sekund i odswiez
 			{
 				await page.waitFor(10000);
 				--i;
@@ -77,8 +92,6 @@ const converter = require('convert-csv-to-array');
 			}
 			catch (e) // jezeli itemu nie ma, i nie jest przeciazone, idz dalej
 			{}
-			//console.log(error);
-			//continue;
 		}
 	}
 	console.log('done');
